@@ -40,3 +40,7 @@ safe:
 # Build and install hab directly
 install: hab
     @echo "Executable available at: zig-out/bin/hab"
+
+# format
+fmt:
+    zig fmt .
