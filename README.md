@@ -8,14 +8,15 @@ Part of [Astoria Tech's Project-Project](https://astoria.app/project-project/)
 
 ## Usage
 
-### Track a new habit
+### Start tracking a new habit
 ```bash
-hab track <HABIT>
+hab add <HABIT>
 ```
 
 ### Mark habit as complete
 ```bash
 hab done <HABIT>
+hab + <HABIT>
 ```
 
 ### View all habits
@@ -30,14 +31,14 @@ hab stats <HABIT>
 
 ### Remove a habit
 ```bash
-hab remove <HABIT>
+hab rm <HABIT>
 ```
 
 ## Examples
 
 ```bash
 # Start tracking a daily meditation habit
-hab track meditation
+hab add meditation
 
 # Mark today's meditation as complete
 hab done meditation
@@ -49,7 +50,7 @@ hab list
 hab stats meditation
 
 # Stop tracking a habit
-hab remove meditation
+hab rm meditation
 ```
 
 ## Installation
