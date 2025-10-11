@@ -16,19 +16,42 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    var parser = argh.Parser.init(allocator, args);
-    try parser.addFlag("-h", "--help", "Show help message");
-    try parser.addFlag("+", "add", "Add task to track");
+    // Skip the first argument (program name) to avoid "unexpected positional argument" error
+    const argsParser = if (args.len > 0) args[1..] else args;
+    var parser = argh.Parser.init(allocator, argsParser);
+    try parser.addFlag("--help", "-h", "Show help message");
+    try parser.addOption("--task", "-t", "read", "Start tracking a new task");
     try parser.parse();
 
-    if (parser.flagPresent("--help")) {
+    // if errors
+    if (parser.errors.items.len > 0) {
+        parser.printErrors();
+    }
+
+    // if --help
+    if (parser.flagPresent("--help") or parser.flagPresent("-h")) {
         std.debug.print("{s}\n", .{logo});
         parser.printHelpWithOptions(.simple_grouped);
         return;
     }
+
+    // get task
+    const task = parser.getOption("--task") orelse "UNNAMED";
+    std.debug.print("task::{s}\n", .{task});
+
+    // write task to csv function
+
+    // format
+    // ------
+    // date,task,completed
+    // 2025-10-11,read,1
+    // 2025-10-11,exercise,0
+    // 2025-10-12,read,1
+
+    // try file.writer().print("{s},{s},{d}\n", .{date, task, completed});
+
+    // dependencies - Only need
+    // stdlib: std.fs.File, std.mem.split
 }
 
-// TODO: persist task to SQLite
-// fn track(name: c_char) bool {
-// std.debug.print("now tracking {s}\n", .{name});
-// }
+//
