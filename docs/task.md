@@ -1,17 +1,20 @@
 # Task Tracking Flat File Format
 
 ## Format Structure
+
 ```
 YYYYMMDD task1:status,task2:status,task3:status,...
 ```
 
 ## Key
+
 - `date` - Date in YYYYMMDD format
 - `task:+` - Task completed today
 - `task:-` - Task not completed today
 - `,` - Separator between tasks
 
 ## Task Codes (1-3 characters)
+
 ```
 r    = read        (daily reading habit)
 v    = vitamins    (take daily vitamins)
@@ -36,6 +39,7 @@ wrt  = write       (writing practice)
 ```
 
 ## Example Month File
+
 ```
 20250901 r:+,v:+,rr:+,p:-,m:+
 20250902 r:+,v:+,rr:-,p:+,m:+
@@ -70,10 +74,12 @@ wrt  = write       (writing practice)
 ```
 
 ## File Naming Convention
+
 - Monthly files: `YYYY-MM.txt` (e.g., `2025-09.txt`)
 - Yearly archive: `YYYY.txt` (e.g., `2025.txt`)
 
 ## Benefits
+
 - Human-readable and easy to edit manually
 - Simple to parse with any programming language
 - Compact format (one line per day)
@@ -82,6 +88,7 @@ wrt  = write       (writing practice)
 - Quick visual scanning for streaks and patterns
 
 ## Parsing Example (pseudocode)
+
 ```
 for each line in file:
     date, tasks = split_by_first_space(line)
@@ -91,6 +98,7 @@ for each line in file:
 ```
 
 ## Statistics You Can Calculate
+
 - Completion rate per task: count(+) / total_days
 - Current streak: consecutive days with +
 - Best streak: longest consecutive x period
