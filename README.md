@@ -1,63 +1,63 @@
     ╭─────╮
-    │ ✓ ○ │  hábito
-    │ ○ ✓ │
+    │ ● ○ │  minima
+    │ ○ ● │
     ╰─────╯
 
-A habit tracker CLI written in [Zig]
+A minimal tracker CLI written in [Zig]
 Part of [Astoria Tech's Project-Project](https://astoria.app/project-project/)
 
 ## Usage
 
-### Start tracking a new habit
+### Start tracking a new minimal
 ```bash
-hab add <HABIT>
+minima add <habit>
 ```
 
 ### Mark habit as complete
 ```bash
-hab done <HABIT>
-hab + <HABIT>
+minima done <habit>
+minima + <habit>
 ```
 
 ### View all habits
 ```bash
-hab list
+minima list
 ```
 
 ### View habit statistics
 ```bash
-hab stats <HABIT>
+minima stats <habit>
 ```
 
 ### Remove a habit
 ```bash
-hab rm <HABIT>
+minima rm <habit>
 ```
 
 ## Examples
 
 ```bash
-# Start tracking a daily meditation habit
-hab add meditation
+# Start tracking a daily meditation
+minima add meditation
 
 # Mark today's meditation as complete
-hab done meditation
+minima done meditation
 
 # View all tracked habits
-hab list
+minima list
 
 # Check your meditation streak
-hab stats meditation
+minima stats meditation
 
 # Stop tracking a habit
-hab rm meditation
+minima rm meditation
 ```
 
 ## Installation
 
 Build from source:
 ```bash
-just hab
+just minima
 ```
 
-The executable will be available at `zig-out/bin/hab`
+The executable will be available at `zig-out/bin/minima`

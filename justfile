@@ -8,10 +8,10 @@ default: build
 build mode=default_mode:
     zig build -Doptimize={{mode}}
 
-# Build and rename executable to 'hab'
-hab mode=default_mode:
+# Build and rename executable to 'min'
+minima mode=default_mode:
     zig build -Doptimize={{mode}}
-    @echo "Built: zig-out/bin/hab"
+    @echo "Built: zig-out/bin/min"
 
 # Run the application
 run *args:
@@ -37,9 +37,9 @@ small:
 safe:
     zig build -Doptimize=ReleaseSafe
 
-# Build and install hab directly
-install: hab
-    @echo "Executable available at: zig-out/bin/hab"
+# Build and install minima directly
+install: minima
+    @echo "Executable available at: zig-out/bin/min"
 
 # format
 fmt:

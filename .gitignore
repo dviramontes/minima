@@ -7,16 +7,5 @@ zig-cache/
 /build/
 /build-*/
 
-# Binary executable (if built in root)
-/habito
-
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
 # Debug files
 *.pdb

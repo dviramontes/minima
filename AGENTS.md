@@ -1,15 +1,15 @@
-Habito, a habit tracking app
+Minima, a minimum habit(https://medium.com/change-becomes-you/minimal-viable-minits-what-is-it-f3ef2e5602c8) tracking CLI
 
 ### TODO
-[ ] create a YYYY-MM.txt file 
+[ ] create a YYYY-MM.txt file
 
 ### Subgoals
 Goals that will allow me to learn enough zig
 to create the CLI
 
-[ ] consume positional arguments from CLI 
-[ ] create file using zig
-[ ] get current system day and print it 
+[x] consume positional arguments from CLI
+[ ] create csv file using zig
+[ ] get current system day and print it
 
 ### Questions
 - Do I need to use SQLite to keep track of taks completed or should i simply store the tasks in a header such as

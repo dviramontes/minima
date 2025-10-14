@@ -1,13 +1,16 @@
 const std = @import("std");
-const habito = @import("habito");
+const minima = @import("minima");
 const argh = @import("argh");
 
 pub fn main() !void {
     const logo =
-        \\╭─────╮
-        \\│ ✓ ○ │ hábito
-        \\│ ○ ✓ │ ──────
-        \\╰─────╯
+        \\
+        \\╭───────╮
+        \\│ ● ○ ○ │ minima
+        \\│ ○ ○ ○ │
+        \\│ ○ ○ ○ │
+        \\╰───────╯
+        \\
     ;
 
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -35,23 +38,39 @@ pub fn main() !void {
         return;
     }
 
-    // get task
-    const task = parser.getOption("--task") orelse "UNNAMED";
-    std.debug.print("task::{s}\n", .{task});
+    if (parser.args.len == 0) {
+        // show TUI
+    } else {
+        // input parsing
+        // TODO: move this to inputParsing function
+        // const minimabitInputs: type = enum { add, sum, reset };
 
-    // write task to csv function
+        // const Input: type = union(minimabitInputs) {
+        //     TUI: struct {},
+        //     Store: struct {},
+        // };
 
-    // format
-    // ------
-    // date,task,completed
-    // 2025-10-11,read,1
-    // 2025-10-11,exercise,0
-    // 2025-10-12,read,1
+        // create a function that takes the name of a new task
+        // get task
+        const task = parser.getOption("--task") orelse "SKIP";
+        std.debug.print("task::{s}\n", .{task});
+        
+        for (parser.args) |arg| {
+            std.debug.print("arg::{s}\n", .{arg});
+        }
 
-    // try file.writer().print("{s},{s},{d}\n", .{date, task, completed});
+        // write task to csv function
 
-    // dependencies - Only need
-    // stdlib: std.fs.File, std.mem.split
+        // format
+        // ------
+        // date,task,completed
+        // 2025-10-11,read,1
+        // 2025-10-11,exercise,0
+        // 2025-10-12,read,1
+
+        // try file.writer().print("{s},{s},{d}\n", .{date, task, completed});
+        // dependencies - Only need
+        // stdlib: std.fs.File, std.mem.split
+
+    }
 }
-
-//
