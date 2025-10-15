@@ -36,6 +36,10 @@
             .url = "git+https://github.com/dayvster/argh#62823176c72c740326f733b5219e02e7193f1101",
             .hash = "argh-0.0.0-XtfO6Y_TAABTtysG8VKZEJfN4azbkjafDVVoVTl18bFW",
         },
+        .zcsv = .{
+            .url = "git+https://github.com/matthewtolman/zig_csv?ref=main#06b18644ef293b9b2def9885a9b460026fc420c4",
+            .hash = "zcsv-0.8.0-Wao6Fl2sAgCxu_ObEjjK9KTD1yp8e4KDUpNMKFJNU7D8",
+        },
     },
     .paths = .{
         "build.zig",
