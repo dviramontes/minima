@@ -6,10 +6,12 @@ pub fn main() !void {
     const logo =
         \\
         \\╭───────╮
-        \\│ ● ○ ○ │ minima
+        \\│ ● ○ ○ │
         \\│ ○ ○ ○ │
-        \\│ ○ ○ ○ │
+        \\│ ○ ○ ○ │ minima
         \\╰───────╯
+        \\
+        \\ A minimal habbit tracking CLI
         \\
     ;
 
@@ -54,7 +56,7 @@ pub fn main() !void {
         // get task
         const task = parser.getOption("--task") orelse "SKIP";
         std.debug.print("task::{s}\n", .{task});
-        
+
         for (parser.args) |arg| {
             std.debug.print("arg::{s}\n", .{arg});
         }
@@ -74,3 +76,5 @@ pub fn main() !void {
 
     }
 }
+
+// let's write a function that can create a CSV of habits, we'll call the file habits.csv
