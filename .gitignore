@@ -9,3 +9,6 @@ zig-cache/
 
 # Debug files
 *.pdb
+
+# Habbits CSV
+habbits.csv

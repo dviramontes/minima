@@ -44,3 +44,7 @@ install: minima
 # format
 fmt:
     zig fmt .
+
+# validate CSV files
+validate:
+    python3 -c "import csv; list(csv.reader(open('habits.csv')))" && echo "Valid CSV"

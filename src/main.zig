@@ -61,6 +61,8 @@ pub fn main() !void {
             std.debug.print("arg::{s}\n", .{arg});
         }
 
+        try writeHabbitRow();
+
         // write task to csv function
 
         // format
@@ -78,3 +80,16 @@ pub fn main() !void {
 }
 
 // let's write a function that can create a CSV of habits, we'll call the file habits.csv
+pub fn writeHabbitRow() !void {
+    const file = try std.fs.cwd().createFile("habits.csv", .{ .read = true });
+    defer file.close();
+
+    try file.writeAll(writeCSV());
+}
+
+fn writeCSV() []const u8 {
+    return 
+    \\date,task
+    \\2025-10-15,read
+    ;
+}
