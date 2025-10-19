@@ -47,4 +47,5 @@ fmt:
 
 # validate CSV files
 validate:
-    python3 -c "import csv; list(csv.reader(open('habits.csv')))" && echo "Valid CSV"
+    @python3 -c "import csv; habbits = list(csv.reader(open('habits.csv'))); print(habbits)" && echo "\nValid CSV"
+    

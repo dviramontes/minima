@@ -6,9 +6,9 @@ pub fn main() !void {
     const logo =
         \\
         \\╭───────╮
-        \\│ ● ○ ○ │
         \\│ ○ ○ ○ │
-        \\│ ○ ○ ○ │ minima
+        \\│ ○ ○ ○ │
+        \\│ ○ ○ ● │ minima
         \\╰───────╯
         \\
         \\ A minimal habbit tracking CLI
@@ -57,39 +57,58 @@ pub fn main() !void {
         const task = parser.getOption("--task") orelse "SKIP";
         std.debug.print("task::{s}\n", .{task});
 
-        for (parser.args) |arg| {
-            std.debug.print("arg::{s}\n", .{arg});
-        }
+        // for (parser.args) |arg| {
+        //     std.debug.print("arg::{s}\n", .{arg});
+        // }
 
-        try writeHabbitRow();
+        try writeHabbitRow(allocator);
 
         // write task to csv function
 
         // format
         // ------
-        // date,task,completed
-        // 2025-10-11,read,1
-        // 2025-10-11,exercise,0
-        // 2025-10-12,read,1
-
-        // try file.writer().print("{s},{s},{d}\n", .{date, task, completed});
-        // dependencies - Only need
-        // stdlib: std.fs.File, std.mem.split
-
+        // date,task
+        // 2025-10-11,read
+        // 2025-10-11,exercise
+        // 2025-10-13,read
     }
 }
 
 // let's write a function that can create a CSV of habits, we'll call the file habits.csv
-pub fn writeHabbitRow() !void {
+pub fn writeHabbitRow(allocator: std.mem.Allocator) !void {
     const file = try std.fs.cwd().createFile("habits.csv", .{ .read = true });
     defer file.close();
 
-    try file.writeAll(writeCSV());
+    // make a new Date and call .now and .toString on it
+    const now = Date.now();
+    const now_str = try now.toString(allocator);
+    // pass the now to writeCSV
+    const csv_content = try writeCSV(allocator, now_str);
+    try file.writeAll(csv_content);
 }
 
-fn writeCSV() []const u8 {
-    return 
-    \\date,task
-    \\2025-10-15,read
-    ;
+// TODO: take a list of tasks
+fn writeCSV(allocator: std.mem.Allocator, date: []const u8) ![]u8 {
+    const tmpl = "date,task\n{s},read,zig,cook,meditate\n";
+    return try std.fmt.allocPrint(allocator, tmpl, .{date});
 }
+
+pub const Date = struct {
+    year: u16,
+    month: u8,
+    day: u8,
+
+    // make a private function called now that can be called to return today's date
+    fn now() Date {
+        const timestamp = std.time.timestamp();
+        const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(timestamp) };
+        const epoch_day = epoch_seconds.getEpochDay();
+        const year_day = epoch_day.calculateYearDay();
+        const month_day = year_day.calculateMonthDay();
+        return Date{ .year = @intCast(year_day.year), .month = @intFromEnum(month_day.month), .day = month_day.day_index };
+    }
+
+    pub fn toString(self: Date, allocator: std.mem.Allocator) ![]u8 {
+        return try std.fmt.allocPrint(allocator, "{d:0>4}-{d:0>2}-{d:0>2}", .{ self.year, self.month, self.day });
+    }
+};
