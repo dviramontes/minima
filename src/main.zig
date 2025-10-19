@@ -1,6 +1,7 @@
 const std = @import("std");
 const minima = @import("minima");
 const argh = @import("argh");
+const tui = @import("tui.zig");
 
 pub fn main() !void {
     const logo =
@@ -39,7 +40,7 @@ pub fn main() !void {
     }
 
     if (parser.args.len == 0) {
-        // show TUI
+        try tui.main();
     } else {
         // input parsing
         // TODO: move this to inputParsing function

@@ -55,9 +55,26 @@ min rm meditation
 
 ## Installation
 
-Build from source:
+### Prerequisites
+
+This project requires Zig 0.15.2. You can use [zvm](https://www.zvm.app/) to manage Zig versions:
+
 ```bash
-just min
+# Install zvm (if not already installed)
+# See https://www.zvm.app/guides/install-zvm/
+
+# Install and use Zig 0.15.2
+zvm install 0.15.2
+zvm use 0.15.2
+
+# Or simply use the .zigversion file
+zvm use
+```
+
+### Build from source
+
+```bash
+zig build
 ```
 
 The executable will be available at `zig-out/bin/min`
