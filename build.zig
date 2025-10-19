@@ -21,6 +21,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const vaxis_pkg = b.dependency("vaxis", .{
+        .target = target,
+        .optimize = optimize,
+    });
     // It's also possible to define more custom flags to toggle optional features
     // of this build script using `b.option()`. All defined flags (including
     // target and optimize options) will be listed when running `zig build --help`
@@ -89,6 +93,7 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.root_module.addImport("argh", argh_pkg.module("argh"));
+    exe.root_module.addImport("vaxis", vaxis_pkg.module("vaxis"));
 
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
