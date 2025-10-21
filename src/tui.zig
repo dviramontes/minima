@@ -63,15 +63,15 @@ pub fn main() !void {
     defer cmd_input.deinit();
 
     // Colors
-    const active_bg: vaxis.Cell.Color = .{ .rgb = .{ 64, 128, 255 } };
-    const selected_bg: vaxis.Cell.Color = .{ .rgb = .{ 32, 64, 255 } };
-    const other_bg: vaxis.Cell.Color = .{ .rgb = .{ 32, 32, 48 } };
+    const active_bg: vaxis.Cell.Color = .{ .rgb = .{ 255, 165, 0 } };
+    const selected_bg: vaxis.Cell.Color = .{ .rgb = .{ 128, 128, 128 } };
+    const other_bg: vaxis.Cell.Color = .{ .rgb = .{ 0, 0, 0 } };
 
     // Table Context
     var demo_tbl: vaxis.widgets.Table.TableContext = .{
         .active_bg = active_bg,
         .active_fg = .{ .rgb = .{ 0, 0, 0 } },
-        .row_bg_1 = .{ .rgb = .{ 8, 8, 8 } },
+        .row_bg_1 = .{ .rgb = .{ 32, 32, 20 } },
         .selected_bg = selected_bg,
         .header_names = .{ .custom = &.{ "Date", "Habit Name", "Tally" } },
         //.header_align = .left,
@@ -207,12 +207,12 @@ pub fn main() !void {
             demo_tbl.active_content_fn = struct {
                 fn see(win: *vaxis.Window, ctx_raw: *const anyopaque) !u16 {
                     const ctx: *const RowContext = @ptrCast(@alignCast(ctx_raw));
-                    win.height = 5;
+                    win.height = 2;
                     const see_win = win.child(.{
                         .x_off = 0,
                         .y_off = 1,
                         .width = win.width,
-                        .height = 4,
+                        .height = 2,
                     });
                     see_win.fill(.{ .style = .{ .bg = ctx.bg } });
                     const content_logo = "--";
@@ -239,7 +239,7 @@ pub fn main() !void {
         win.clear();
 
         // - Top
-        const top_div = 6;
+        const top_div = 13;
         const top_bar = win.child(.{
             .x_off = 0,
             .y_off = 0,
@@ -253,7 +253,7 @@ pub fn main() !void {
         } });
         const logo_bar = vaxis.widgets.alignment.center(
             top_bar,
-            44,
+            10,
             top_bar.height - (top_bar.height / 3),
         );
         _ = logo_bar.print(title_segs[0..], .{ .wrap = .word });

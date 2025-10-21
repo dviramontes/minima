@@ -9,7 +9,6 @@ pub const logo =
 ;
 
 pub const logoSmall =
-    \\╭────────╮
-    \\│ minima │
-    \\╰────────╯
+    \\ minima 
+    \\ ------
 ;
