@@ -3,6 +3,7 @@ const fmt = std.fmt;
 const heap = std.heap;
 const mem = std.mem;
 const meta = std.meta;
+const common = @import("common.zig");
 
 const vaxis = @import("vaxis");
 
@@ -17,19 +18,23 @@ const ActiveSection = enum {
 pub fn main() !void {
     var gpa = heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.detectLeaks()) log.err("Memory leak detected!", .{});
-    const alloc = gpa.allocator();
 
-    // Users set up below the main function
-    const users_buf = try alloc.dupe(User, users[0..]);
-    var user_list = std.ArrayList(User).fromOwnedSlice(users_buf);
-    defer user_list.deinit(alloc);
-    var user_mal = std.MultiArrayList(User){};
-    for (users_buf[0..]) |user| try user_mal.append(alloc, user);
-    defer user_mal.deinit(alloc);
+    const alloc = gpa.allocator();
+    const habits_buf = try alloc.dupe(Habit, habits[0..]);
+
+    var habit_list = std.ArrayList(Habit).fromOwnedSlice(habits_buf);
+    defer habit_list.deinit(alloc);
+
+    var habit_mal = std.MultiArrayList(Habit){};
+    for (habits_buf[0..]) |habit| {
+        try habit_mal.append(alloc, habit);
+    }
+    defer habit_mal.deinit(alloc);
 
     var buffer: [1024]u8 = undefined;
     var tty = try vaxis.Tty.init(&buffer);
     defer tty.deinit();
+
     const tty_writer = tty.writer();
     var vx = try vaxis.init(alloc, .{
         .kitty_keyboard_flags = .{ .report_events = true },
@@ -47,24 +52,12 @@ pub fn main() !void {
     try vx.enterAltScreen(tty.writer());
     try vx.queryTerminal(tty.writer(), 250 * std.time.ns_per_ms);
 
-    const logo =
-        \\░█░█░█▀█░█░█░▀█▀░█▀▀░░░▀█▀░█▀█░█▀▄░█░░░█▀▀░
-        \\░▀▄▀░█▀█░▄▀▄░░█░░▀▀█░░░░█░░█▀█░█▀▄░█░░░█▀▀░
-        \\░░▀░░▀░▀░▀░▀░▀▀▀░▀▀▀░░░░▀░░▀░▀░▀▀░░▀▀▀░▀▀▀░
-    ;
     const title_logo = vaxis.Cell.Segment{
-        .text = logo,
+        .text = common.logoSmall,
         .style = .{},
     };
-    const title_info = vaxis.Cell.Segment{
-        .text = "===A Demo of the the Vaxis Table Widget!===",
-        .style = .{},
-    };
-    const title_disclaimer = vaxis.Cell.Segment{
-        .text = "(All data is non-sensical & LLM generated.)",
-        .style = .{},
-    };
-    var title_segs = [_]vaxis.Cell.Segment{ title_logo, title_info, title_disclaimer };
+
+    var title_segs = [_]vaxis.Cell.Segment{title_logo};
 
     var cmd_input = vaxis.widgets.TextInput.init(alloc);
     defer cmd_input.deinit();
@@ -80,9 +73,9 @@ pub fn main() !void {
         .active_fg = .{ .rgb = .{ 0, 0, 0 } },
         .row_bg_1 = .{ .rgb = .{ 8, 8, 8 } },
         .selected_bg = selected_bg,
-        .header_names = .{ .custom = &.{ "First", "Last", "Username", "Phone#", "Email" } },
+        .header_names = .{ .custom = &.{ "Date", "Habit Name", "Tally" } },
         //.header_align = .left,
-        .col_indexes = .{ .by_idx = &.{ 0, 1, 2, 4, 3 } },
+        .col_indexes = .{ .by_idx = &.{ 1, 0, 2 } },
         //.col_align = .{ .by_idx = &.{ .left, .left, .center, .center, .left } },
         //.col_align = .{ .all = .center },
         //.header_borders = true,
@@ -178,7 +171,7 @@ pub fn main() !void {
                                 mem.eql(u8, ":quit", cmd) or
                                 mem.eql(u8, ":exit", cmd)) return;
                             if (mem.eql(u8, "G", cmd)) {
-                                demo_tbl.row = @intCast(user_list.items.len - 1);
+                                demo_tbl.row = @intCast(habit_list.items.len - 1);
                                 active = .mid;
                             }
                             if (cmd.len >= 2 and mem.eql(u8, "gg", cmd[0..2])) {
@@ -222,12 +215,7 @@ pub fn main() !void {
                         .height = 4,
                     });
                     see_win.fill(.{ .style = .{ .bg = ctx.bg } });
-                    const content_logo =
-                        \\
-                        \\░█▀▄░█▀█░█░█░░░█▀▀░█▀█░█▀█░▀█▀░█▀▀░█▀█░▀█▀
-                        \\░█▀▄░█░█░█▄█░░░█░░░█░█░█░█░░█░░█▀▀░█░█░░█░
-                        \\░▀░▀░▀▀▀░▀░▀░░░▀▀▀░▀▀▀░▀░▀░░▀░░▀▀▀░▀░▀░░▀░
-                    ;
+                    const content_logo = "--";
                     const content_segs: []const vaxis.Cell.Segment = &.{
                         .{
                             .text = ctx.row,
@@ -277,14 +265,14 @@ pub fn main() !void {
             .width = win.width,
             .height = win.height - (top_bar.height + 1),
         });
-        if (user_list.items.len > 0) {
+        if (habit_list.items.len > 0) {
             demo_tbl.active = active == .mid;
             try vaxis.widgets.Table.drawTable(
                 event_alloc,
                 middle_bar,
-                //users_buf[0..],
-                //user_list,
-                user_mal,
+                //habits_buf[0..],
+                //habit_list,
+                habit_mal,
                 &demo_tbl,
             );
         }
@@ -304,51 +292,125 @@ pub fn main() !void {
     }
 }
 
-/// User Struct
-pub const User = struct {
-    first: []const u8,
-    last: []const u8,
-    user: []const u8,
-    email: ?[]const u8 = null,
-    phone: ?[]const u8 = null,
+pub const Habit = struct {
+    name: []const u8,
+    date: []const u8,
+    tally: []const u8,
+    description: ?[]const u8 = null,
 };
 
-// Users Array
-const users = [_]User{
-    .{ .first = "Nancy", .last = "Dudley", .user = "angela73", .email = "brian47@rodriguez.biz", .phone = null },
-    .{ .first = "Emily", .last = "Thornton", .user = "mrogers", .email = null, .phone = "(558)888-8604x094" },
-    .{ .first = "Kyle", .last = "Huff", .user = "xsmith", .email = null, .phone = "301.127.0801x12398" },
-    .{ .first = "Christine", .last = "Dodson", .user = "amandabradley", .email = "cheryl21@sullivan.com", .phone = null },
-    .{ .first = "Nathaniel", .last = "Kennedy", .user = "nrobinson", .email = null, .phone = null },
-    .{ .first = "Laura", .last = "Leon", .user = "dawnjones", .email = "fjenkins@patel.com", .phone = "1833013180" },
-    .{ .first = "Patrick", .last = "Landry", .user = "michaelhutchinson", .email = "daniel17@medina-wallace.net", .phone = "+1-634-486-6444x964" },
-    .{ .first = "Tammy", .last = "Hall", .user = "jamessmith", .email = null, .phone = "(926)810-3385x22059" },
-    .{ .first = "Stephanie", .last = "Anderson", .user = "wgillespie", .email = "campbelljaime@yahoo.com", .phone = null },
-    .{ .first = "Jennifer", .last = "Williams", .user = "shawn60", .email = null, .phone = "611-385-4771x97523" },
-    .{ .first = "Elizabeth", .last = "Ortiz", .user = "jennifer76", .email = "johnbradley@delgado.info", .phone = null },
-    .{ .first = "Stacy", .last = "Mays", .user = "scottgonzalez", .email = "kramermatthew@gmail.com", .phone = null },
-    .{ .first = "Jennifer", .last = "Smith", .user = "joseph75", .email = "masseyalexander@hill-moore.net", .phone = null },
-    .{ .first = "Gary", .last = "Hammond", .user = "brittany26", .email = null, .phone = null },
-    .{ .first = "Lisa", .last = "Johnson", .user = "tina28", .email = null, .phone = "850-606-2978x1081" },
-    .{ .first = "Zachary", .last = "Hopkins", .user = "vargasmichael", .email = null, .phone = null },
-    .{ .first = "Joshua", .last = "Kidd", .user = "ghanna", .email = "jbrown@yahoo.com", .phone = null },
-    .{ .first = "Dawn", .last = "Jones", .user = "alisonlindsey", .email = null, .phone = null },
-    .{ .first = "Monica", .last = "Berry", .user = "barbara40", .email = "michael00@hotmail.com", .phone = "(295)346-6453x343" },
-    .{ .first = "Shannon", .last = "Roberts", .user = "krystal37", .email = null, .phone = "980-920-9386x454" },
-    .{ .first = "Thomas", .last = "Mitchell", .user = "williamscorey", .email = "richardduncan@roberts.com", .phone = null },
-    .{ .first = "Nicole", .last = "Shaffer", .user = "rogerstroy", .email = null, .phone = "(570)128-5662" },
-    .{ .first = "Edward", .last = "Bennett", .user = "andersonchristina", .email = null, .phone = null },
-    .{ .first = "Duane", .last = "Howard", .user = "pcarpenter", .email = "griffithwayne@parker.net", .phone = null },
-    .{ .first = "Mary", .last = "Brown", .user = "kimberlyfrost", .email = "perezsara@anderson-andrews.net", .phone = null },
-    .{ .first = "Pamela", .last = "Sloan", .user = "kvelez", .email = "huynhlacey@moore-bell.biz", .phone = "001-359-125-1393x8716" },
-    .{ .first = "Timothy", .last = "Charles", .user = "anthony04", .email = "morrissara@hawkins.info", .phone = "+1-619-369-9572" },
-    .{ .first = "Sydney", .last = "Torres", .user = "scott42", .email = "asnyder@mitchell.net", .phone = null },
-    .{ .first = "John", .last = "Jones", .user = "anthonymoore", .email = null, .phone = "701.236.0571x99622" },
-    .{ .first = "Erik", .last = "Johnson", .user = "allisonsanders", .email = null, .phone = null },
-    .{ .first = "Donna", .last = "Kirk", .user = "laurie81", .email = null, .phone = null },
-    .{ .first = "Karina", .last = "White", .user = "uperez", .email = null, .phone = null },
-    .{ .first = "Jesse", .last = "Schwartz", .user = "ryan60", .email = "latoyawilliams@gmail.com", .phone = null },
-    .{ .first = "Cindy", .last = "Romero", .user = "christopher78", .email = "faulknerchristina@gmail.com", .phone = "780.288.2319x583" },
-    .{ .first = "Tyler", .last = "Sanders", .user = "bennettjessica", .email = null, .phone = "1966269423" },
-    .{ .first = "Pamela", .last = "Carter", .user = "zsnyder", .email = null, .phone = "125-062-9130x58413" },
+// Habits Array - 28 days with recurring daily tasks
+const habits = [_]Habit{
+    .{ .name = "Meditation", .date = "2025-10-01", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-01", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-01", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-01", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-02", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-02", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-02", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-02", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-03", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-03", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-03", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-03", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-04", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-04", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-04", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-04", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-05", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-05", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-05", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-05", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-06", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-06", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-06", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-06", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-07", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-07", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-07", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-07", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-08", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-08", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-08", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-08", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-09", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-09", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-09", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-09", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-10", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-10", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-10", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-10", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-11", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-11", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-11", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-11", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-12", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-12", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-12", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-12", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-13", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-13", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-13", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-13", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-14", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-14", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-14", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-14", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-15", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-15", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-15", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-15", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-16", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-16", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-16", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-16", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-17", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-17", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-17", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-17", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-18", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-18", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-18", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-18", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-19", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-19", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-19", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-19", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-20", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-20", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-20", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-20", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-21", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-21", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-21", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-21", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-22", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-22", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-22", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-22", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-23", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-23", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-23", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-23", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-24", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-24", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-24", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-24", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-25", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-25", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-25", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-25", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-26", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-26", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-26", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-26", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-27", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-27", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-27", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-27", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-28", .tally = "●" },
+    .{ .name = "Exercise", .date = "2025-10-28", .tally = "●" },
+    .{ .name = "Read", .date = "2025-10-28", .tally = "●" },
+    .{ .name = "Journal", .date = "2025-10-28", .tally = "●" },
 };

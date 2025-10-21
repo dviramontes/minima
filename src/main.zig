@@ -1,21 +1,9 @@
 const std = @import("std");
-const minima = @import("minima");
 const argh = @import("argh");
 const tui = @import("tui.zig");
+const common = @import("common.zig");
 
 pub fn main() !void {
-    const logo =
-        \\
-        \\╭───────╮
-        \\│ ● ○ ○ │
-        \\│ ○ ○ ○ │
-        \\│ ○ ○ ○ │ minima
-        \\╰───────╯
-        \\
-        \\ A minimal habbit tracking CLI
-        \\
-    ;
-
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
@@ -36,7 +24,7 @@ pub fn main() !void {
 
     // if --help
     if (parser.flagPresent("--help") or parser.flagPresent("-h")) {
-        std.debug.print("{s}\n", .{logo});
+        std.debug.print("{s}\nA minimal habbit tracking CLI\n\n", .{common.logo});
         parser.printHelpWithOptions(.simple_grouped);
         return;
     }
@@ -58,10 +46,6 @@ pub fn main() !void {
         const task = parser.getOption("--task") orelse "SKIP";
         std.debug.print("task::{s}\n", .{task});
 
-        for (parser.args) |arg| {
-            std.debug.print("arg::{s}\n", .{arg});
-        }
-
         // write task to csv function
 
         // format
@@ -79,3 +63,9 @@ pub fn main() !void {
 }
 
 // let's write a function that can create a CSV of habits, we'll call the file habits.csv
+
+// Example zig code
+//
+// for (parser.args) |arg| {
+//   std.debug.print("arg::{s}\n", .{arg});
+// }
