@@ -2,6 +2,7 @@ const std = @import("std");
 const argh = @import("argh");
 const tui = @import("tui.zig");
 const common = @import("common.zig");
+const model = @import("model.zig");
 
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -24,13 +25,17 @@ pub fn main() !void {
 
     // if --help
     if (parser.flagPresent("--help") or parser.flagPresent("-h")) {
-        std.debug.print("{s}\nA minimal habbit tracking CLI\n\n", .{common.logo});
+        std.debug.print("{s}\nA minimal habit tracking CLI\n\n", .{common.logo});
         parser.printHelpWithOptions(.simple_grouped);
         return;
     }
 
     if (parser.args.len == 0) {
-        try tui.main();
+        // TODO: if habits.csv is empty
+        // render sample example_habits
+        try tui.render(&example_habits);
+        // else: load habits from ./habits.csv
+        // try tui.render(loaded_habits);
     } else {
         // input parsing
         // TODO: move this to inputParsing function
@@ -62,10 +67,15 @@ pub fn main() !void {
     }
 }
 
-// let's write a function that can create a CSV of habits, we'll call the file habits.csv
-
-// Example zig code
-//
-// for (parser.args) |arg| {
-//   std.debug.print("arg::{s}\n", .{arg});
-// }
+// Habits Array - Sample data
+const example_habits = [_]model.Habit{
+    .{ .name = "Meditation", .date = "2025-10-01" },
+    .{ .name = "Exercise", .date = "2025-10-01" },
+    .{ .name = "Read", .date = "2025-10-01" },
+    .{ .name = "Journal", .date = "2025-10-01" },
+    .{ .name = "Meditation", .date = "2025-10-02" },
+    .{ .name = "Read", .date = "2025-10-02" },
+    .{ .name = "Exercise", .date = "2025-10-03" },
+    .{ .name = "Read", .date = "2025-10-03" },
+    .{ .name = "Meditation", .date = "2025-10-03" },
+};

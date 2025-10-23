@@ -4,10 +4,9 @@ const heap = std.heap;
 const mem = std.mem;
 const meta = std.meta;
 const common = @import("common.zig");
-
 const vaxis = @import("vaxis");
-
 const log = std.log.scoped(.main);
+const model = @import("model.zig");
 
 const ActiveSection = enum {
     top,
@@ -15,7 +14,7 @@ const ActiveSection = enum {
     btm,
 };
 
-pub fn main() !void {
+pub fn render(habits: []const model.Habit) !void {
     var gpa = heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.detectLeaks()) log.err("Memory leak detected!", .{});
 
@@ -40,7 +39,7 @@ pub fn main() !void {
         habit_dates_map.deinit();
     }
 
-    var habit_mal = std.MultiArrayList(HabitAggregate){};
+    var habit_mal = std.MultiArrayList(model.HabitAggregate){};
     for (aggregated_habits.items) |habit| {
         try habit_mal.append(alloc, habit);
     }
@@ -97,7 +96,10 @@ pub fn main() !void {
         //.col_borders = true,
         // .col_width = .{ .static_all = 15 },
         // .col_width = .{ .dynamic_header_len = 3 },
-        .col_width = .{ .static_individual = &.{ 20, 40, 15, 25, 15 } },
+        .col_width = .{ .static_individual = &.{
+            20,
+            80,
+        } },
         //.col_width = .dynamic_fill,
         //.y_off = 10,
     };
@@ -319,23 +321,7 @@ pub fn main() !void {
     }
 }
 
-pub const Habit = struct {
-    name: []const u8,
-    date: []const u8,
-    description: ?[]const u8 = null,
-};
-
-pub const HabitAggregate = struct {
-    name: []const u8,
-    tally: []const u8,
-};
-
-pub const HabitDates = struct {
-    habit_name: []const u8,
-    dates: []const []const u8,
-};
-
-fn buildHabitTallyMap(allocator: mem.Allocator, habits_input: []const Habit) !std.ArrayList(HabitAggregate) {
+fn buildHabitTallyMap(allocator: mem.Allocator, habits_input: []const model.Habit) !std.ArrayList(model.HabitAggregate) {
     var tally_map = std.StringHashMap(usize).init(allocator);
     defer tally_map.deinit();
 
@@ -350,7 +336,7 @@ fn buildHabitTallyMap(allocator: mem.Allocator, habits_input: []const Habit) !st
     }
 
     // Build result list
-    var result = std.ArrayList(HabitAggregate){};
+    var result = std.ArrayList(model.HabitAggregate){};
     var it = tally_map.iterator();
     while (it.next()) |entry| {
         const name = try allocator.dupe(u8, entry.key_ptr.*);
@@ -360,7 +346,7 @@ fn buildHabitTallyMap(allocator: mem.Allocator, habits_input: []const Habit) !st
         var tally_buf = try allocator.alloc(u8, count * 3); // UTF-8 ● is 3 bytes
         var idx: usize = 0;
         for (0..count) |_| {
-            @memcpy(tally_buf[idx..idx + 3], "●");
+            @memcpy(tally_buf[idx .. idx + 3], "●");
             idx += 3;
         }
 
@@ -373,7 +359,7 @@ fn buildHabitTallyMap(allocator: mem.Allocator, habits_input: []const Habit) !st
     return result;
 }
 
-fn buildHabitDatesMap(allocator: mem.Allocator, habits_input: []const Habit) !std.StringHashMap([]const []const u8) {
+fn buildHabitDatesMap(allocator: mem.Allocator, habits_input: []const model.Habit) !std.StringHashMap([]const []const u8) {
     var dates_map = std.StringHashMap(std.ArrayList([]const u8)).init(allocator);
     defer {
         var dates_it = dates_map.iterator();
@@ -402,16 +388,3 @@ fn buildHabitDatesMap(allocator: mem.Allocator, habits_input: []const Habit) !st
 
     return result;
 }
-
-// Habits Array - Sample data
-const habits = [_]Habit{
-    .{ .name = "Meditation", .date = "2025-10-01" },
-    .{ .name = "Exercise", .date = "2025-10-01" },
-    .{ .name = "Read", .date = "2025-10-01" },
-    .{ .name = "Journal", .date = "2025-10-01" },
-    .{ .name = "Meditation", .date = "2025-10-02" },
-    .{ .name = "Read", .date = "2025-10-02" },
-    .{ .name = "Exercise", .date = "2025-10-03" },
-    .{ .name = "Read", .date = "2025-10-03" },
-    .{ .name = "Meditation", .date = "2025-10-03" },
-};
