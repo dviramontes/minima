@@ -20,13 +20,28 @@ pub fn main() !void {
     defer if (gpa.detectLeaks()) log.err("Memory leak detected!", .{});
 
     const alloc = gpa.allocator();
-    const habits_buf = try alloc.dupe(Habit, habits[0..]);
 
-    var habit_list = std.ArrayList(Habit).fromOwnedSlice(habits_buf);
-    defer habit_list.deinit(alloc);
+    // Build habit tally map and dates map
+    var aggregated_habits = try buildHabitTallyMap(alloc, habits[0..]);
+    defer {
+        for (aggregated_habits.items) |item| {
+            alloc.free(item.name);
+            alloc.free(item.tally);
+        }
+        aggregated_habits.deinit(alloc);
+    }
 
-    var habit_mal = std.MultiArrayList(Habit){};
-    for (habits_buf[0..]) |habit| {
+    var habit_dates_map = try buildHabitDatesMap(alloc, habits[0..]);
+    defer {
+        var it = habit_dates_map.iterator();
+        while (it.next()) |entry| {
+            alloc.free(entry.value_ptr.*);
+        }
+        habit_dates_map.deinit();
+    }
+
+    var habit_mal = std.MultiArrayList(HabitAggregate){};
+    for (aggregated_habits.items) |habit| {
         try habit_mal.append(alloc, habit);
     }
     defer habit_mal.deinit(alloc);
@@ -73,16 +88,16 @@ pub fn main() !void {
         .active_fg = .{ .rgb = .{ 0, 0, 0 } },
         .row_bg_1 = .{ .rgb = .{ 32, 32, 20 } },
         .selected_bg = selected_bg,
-        .header_names = .{ .custom = &.{ "Date", "Habit Name", "Tally" } },
+        .header_names = .{ .custom = &.{ "Habit Name", "Tally" } },
         //.header_align = .left,
-        .col_indexes = .{ .by_idx = &.{ 1, 0, 2 } },
+        .col_indexes = .{ .by_idx = &.{ 0, 1 } },
         //.col_align = .{ .by_idx = &.{ .left, .left, .center, .center, .left } },
-        //.col_align = .{ .all = .center },
+        // .col_align = .{ .all = .center },
         //.header_borders = true,
         //.col_borders = true,
-        //.col_width = .{ .static_all = 15 },
-        //.col_width = .{ .dynamic_header_len = 3 },
-        //.col_width = .{ .static_individual = &.{ 10, 20, 15, 25, 15 } },
+        // .col_width = .{ .static_all = 15 },
+        // .col_width = .{ .dynamic_header_len = 3 },
+        .col_width = .{ .static_individual = &.{ 20, 40, 15, 25, 15 } },
         //.col_width = .dynamic_fill,
         //.y_off = 10,
     };
@@ -171,7 +186,7 @@ pub fn main() !void {
                                 mem.eql(u8, ":quit", cmd) or
                                 mem.eql(u8, ":exit", cmd)) return;
                             if (mem.eql(u8, "G", cmd)) {
-                                demo_tbl.row = @intCast(habit_list.items.len - 1);
+                                demo_tbl.row = @intCast(aggregated_habits.items.len - 1);
                                 active = .mid;
                             }
                             if (cmd.len >= 2 and mem.eql(u8, "gg", cmd[0..2])) {
@@ -196,37 +211,51 @@ pub fn main() !void {
                 break :seeRow;
             }
             const RowContext = struct {
-                row: []const u8,
+                dates: []const u8,
                 bg: vaxis.Color,
             };
+
+            // Get the dates for the selected habit
+            const selected_habit = if (demo_tbl.row < aggregated_habits.items.len)
+                aggregated_habits.items[demo_tbl.row]
+            else
+                break :seeRow;
+
+            const habit_dates = habit_dates_map.get(selected_habit.name) orelse break :seeRow;
+
+            // Format dates as a comma-separated string
+            var dates_buf = std.ArrayList(u8){};
+            for (habit_dates, 0..) |date, i| {
+                try dates_buf.appendSlice(event_alloc, date);
+                if (i < habit_dates.len - 1) {
+                    try dates_buf.appendSlice(event_alloc, ", ");
+                }
+            }
+
             const row_ctx = RowContext{
-                .row = try fmt.allocPrint(event_alloc, "Row #: {d}", .{demo_tbl.row}),
+                .dates = try dates_buf.toOwnedSlice(event_alloc),
                 .bg = demo_tbl.active_bg,
             };
             demo_tbl.active_ctx = &row_ctx;
             demo_tbl.active_content_fn = struct {
                 fn see(win: *vaxis.Window, ctx_raw: *const anyopaque) !u16 {
                     const ctx: *const RowContext = @ptrCast(@alignCast(ctx_raw));
-                    win.height = 2;
+                    const lines_needed = @min((ctx.dates.len / win.width) + 2, 5);
+                    win.height = @intCast(lines_needed);
                     const see_win = win.child(.{
                         .x_off = 0,
                         .y_off = 1,
                         .width = win.width,
-                        .height = 2,
+                        .height = @intCast(lines_needed),
                     });
                     see_win.fill(.{ .style = .{ .bg = ctx.bg } });
-                    const content_logo = "--";
                     const content_segs: []const vaxis.Cell.Segment = &.{
                         .{
-                            .text = ctx.row,
-                            .style = .{ .bg = ctx.bg },
-                        },
-                        .{
-                            .text = content_logo,
+                            .text = ctx.dates,
                             .style = .{ .bg = ctx.bg },
                         },
                     };
-                    _ = see_win.print(content_segs, .{});
+                    _ = see_win.print(content_segs, .{ .wrap = .word });
                     return see_win.height;
                 }
             }.see;
@@ -265,13 +294,11 @@ pub fn main() !void {
             .width = win.width,
             .height = win.height - (top_bar.height + 1),
         });
-        if (habit_list.items.len > 0) {
+        if (aggregated_habits.items.len > 0) {
             demo_tbl.active = active == .mid;
             try vaxis.widgets.Table.drawTable(
                 event_alloc,
                 middle_bar,
-                //habits_buf[0..],
-                //habit_list,
                 habit_mal,
                 &demo_tbl,
             );
@@ -295,122 +322,96 @@ pub fn main() !void {
 pub const Habit = struct {
     name: []const u8,
     date: []const u8,
-    tally: []const u8,
     description: ?[]const u8 = null,
 };
 
-// Habits Array - 28 days with recurring daily tasks
+pub const HabitAggregate = struct {
+    name: []const u8,
+    tally: []const u8,
+};
+
+pub const HabitDates = struct {
+    habit_name: []const u8,
+    dates: []const []const u8,
+};
+
+fn buildHabitTallyMap(allocator: mem.Allocator, habits_input: []const Habit) !std.ArrayList(HabitAggregate) {
+    var tally_map = std.StringHashMap(usize).init(allocator);
+    defer tally_map.deinit();
+
+    // Count occurrences
+    for (habits_input) |habit| {
+        const entry = try tally_map.getOrPut(habit.name);
+        if (entry.found_existing) {
+            entry.value_ptr.* += 1;
+        } else {
+            entry.value_ptr.* = 1;
+        }
+    }
+
+    // Build result list
+    var result = std.ArrayList(HabitAggregate){};
+    var it = tally_map.iterator();
+    while (it.next()) |entry| {
+        const name = try allocator.dupe(u8, entry.key_ptr.*);
+
+        // Create tally string with dots (●)
+        const count = entry.value_ptr.*;
+        var tally_buf = try allocator.alloc(u8, count * 3); // UTF-8 ● is 3 bytes
+        var idx: usize = 0;
+        for (0..count) |_| {
+            @memcpy(tally_buf[idx..idx + 3], "●");
+            idx += 3;
+        }
+
+        try result.append(allocator, .{
+            .name = name,
+            .tally = tally_buf,
+        });
+    }
+
+    return result;
+}
+
+fn buildHabitDatesMap(allocator: mem.Allocator, habits_input: []const Habit) !std.StringHashMap([]const []const u8) {
+    var dates_map = std.StringHashMap(std.ArrayList([]const u8)).init(allocator);
+    defer {
+        var dates_it = dates_map.iterator();
+        while (dates_it.next()) |entry| {
+            entry.value_ptr.deinit(allocator);
+        }
+        dates_map.deinit();
+    }
+
+    // Collect dates for each habit
+    for (habits_input) |habit| {
+        const dates_entry = try dates_map.getOrPut(habit.name);
+        if (!dates_entry.found_existing) {
+            dates_entry.value_ptr.* = std.ArrayList([]const u8){};
+        }
+        try dates_entry.value_ptr.append(allocator, habit.date);
+    }
+
+    // Build final map
+    var result = std.StringHashMap([]const []const u8).init(allocator);
+    var it = dates_map.iterator();
+    while (it.next()) |entry| {
+        const dates_slice = try allocator.dupe([]const u8, entry.value_ptr.items);
+        try result.put(entry.key_ptr.*, dates_slice);
+    }
+
+    return result;
+}
+
+// Habits Array - Sample data
 const habits = [_]Habit{
-    .{ .name = "Meditation", .date = "2025-10-01", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-01", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-01", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-01", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-02", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-02", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-02", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-02", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-03", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-03", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-03", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-03", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-04", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-04", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-04", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-04", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-05", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-05", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-05", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-05", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-06", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-06", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-06", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-06", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-07", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-07", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-07", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-07", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-08", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-08", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-08", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-08", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-09", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-09", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-09", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-09", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-10", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-10", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-10", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-10", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-11", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-11", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-11", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-11", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-12", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-12", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-12", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-12", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-13", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-13", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-13", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-13", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-14", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-14", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-14", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-14", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-15", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-15", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-15", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-15", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-16", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-16", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-16", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-16", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-17", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-17", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-17", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-17", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-18", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-18", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-18", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-18", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-19", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-19", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-19", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-19", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-20", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-20", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-20", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-20", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-21", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-21", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-21", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-21", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-22", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-22", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-22", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-22", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-23", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-23", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-23", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-23", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-24", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-24", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-24", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-24", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-25", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-25", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-25", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-25", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-26", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-26", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-26", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-26", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-27", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-27", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-27", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-27", .tally = "●" },
-    .{ .name = "Meditation", .date = "2025-10-28", .tally = "●" },
-    .{ .name = "Exercise", .date = "2025-10-28", .tally = "●" },
-    .{ .name = "Read", .date = "2025-10-28", .tally = "●" },
-    .{ .name = "Journal", .date = "2025-10-28", .tally = "●" },
+    .{ .name = "Meditation", .date = "2025-10-01" },
+    .{ .name = "Exercise", .date = "2025-10-01" },
+    .{ .name = "Read", .date = "2025-10-01" },
+    .{ .name = "Journal", .date = "2025-10-01" },
+    .{ .name = "Meditation", .date = "2025-10-02" },
+    .{ .name = "Read", .date = "2025-10-02" },
+    .{ .name = "Exercise", .date = "2025-10-03" },
+    .{ .name = "Read", .date = "2025-10-03" },
+    .{ .name = "Meditation", .date = "2025-10-03" },
 };
