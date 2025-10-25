@@ -8,7 +8,4 @@ pub const logo =
     \\
 ;
 
-pub const logoSmall =
-    \\ minima 
-    \\ ------
-;
+pub const logoSmall = "minima";

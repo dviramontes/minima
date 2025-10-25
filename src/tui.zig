@@ -68,7 +68,10 @@ pub fn render(habits: []const model.Habit) !void {
 
     const title_logo = vaxis.Cell.Segment{
         .text = common.logoSmall,
-        .style = .{},
+        .style = .{
+            .fg = .{ .rgb = .{ 255, 255, 255 } },
+            .bg = .{ .rgb = .{ 0, 0, 0 } },
+        },
     };
 
     var title_segs = [_]vaxis.Cell.Segment{title_logo};
@@ -77,7 +80,7 @@ pub fn render(habits: []const model.Habit) !void {
     defer cmd_input.deinit();
 
     // Colors
-    const active_bg: vaxis.Cell.Color = .{ .rgb = .{ 255, 165, 0 } };
+    const active_bg: vaxis.Cell.Color = .{ .rgb = .{ 235, 168, 66 } };
     const selected_bg: vaxis.Cell.Color = .{ .rgb = .{ 128, 128, 128 } };
     const other_bg: vaxis.Cell.Color = .{ .rgb = .{ 0, 0, 0 } };
 
@@ -341,13 +344,15 @@ fn buildHabitTallyMap(allocator: mem.Allocator, habits_input: []const model.Habi
     while (it.next()) |entry| {
         const name = try allocator.dupe(u8, entry.key_ptr.*);
 
-        // Create tally string with dots (●)
+        // Create tally string with dots (● )
         const count = entry.value_ptr.*;
-        var tally_buf = try allocator.alloc(u8, count * 3); // UTF-8 ● is 3 bytes
+        const bytes_per_dot = 4; // UTF-8 ● is 3 bytes + 1 byte space
+        var tally_buf = try allocator.alloc(u8, count * bytes_per_dot); // UTF-8 ● is 3 bytes
         var idx: usize = 0;
         for (0..count) |_| {
             @memcpy(tally_buf[idx .. idx + 3], "●");
-            idx += 3;
+            tally_buf[idx + 3] = ' ';
+            idx += 4;
         }
 
         try result.append(allocator, .{
