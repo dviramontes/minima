@@ -216,8 +216,10 @@ pub fn render(habits: []const model.Habit) !void {
                 break :seeRow;
             }
             const RowContext = struct {
+                habit_name: []const u8,
                 dates: []const u8,
                 bg: vaxis.Color,
+                allocator: mem.Allocator,
             };
 
             // Get the dates for the selected habit
@@ -238,14 +240,16 @@ pub fn render(habits: []const model.Habit) !void {
             }
 
             const row_ctx = RowContext{
+                .habit_name = selected_habit.name,
                 .dates = try dates_buf.toOwnedSlice(event_alloc),
                 .bg = demo_tbl.active_bg,
+                .allocator = event_alloc,
             };
             demo_tbl.active_ctx = &row_ctx;
             demo_tbl.active_content_fn = struct {
                 fn see(win: *vaxis.Window, ctx_raw: *const anyopaque) !u16 {
                     const ctx: *const RowContext = @ptrCast(@alignCast(ctx_raw));
-                    const lines_needed = @min((ctx.dates.len / win.width) + 2, 5);
+                    const lines_needed = @min((ctx.dates.len / win.width) + 3, 6);
                     win.height = @intCast(lines_needed);
                     const see_win = win.child(.{
                         .x_off = 0,
@@ -254,10 +258,19 @@ pub fn render(habits: []const model.Habit) !void {
                         .height = @intCast(lines_needed),
                     });
                     see_win.fill(.{ .style = .{ .bg = ctx.bg } });
+                    const date_row_content = try std.fmt.allocPrint(ctx.allocator, " {s}", .{ctx.dates});
                     const content_segs: []const vaxis.Cell.Segment = &.{
                         .{
-                            .text = ctx.dates,
+                            .text = " # ",
                             .style = .{ .bg = ctx.bg },
+                        },
+                        .{
+                            .text = "\n",
+                            .style = .{ .bg = ctx.bg },
+                        },
+                        .{
+                            .text = date_row_content,
+                            .style = .{ .bg = ctx.bg, .italic = true },
                         },
                     };
                     _ = see_win.print(content_segs, .{ .wrap = .word });
