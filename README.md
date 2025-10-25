@@ -1,6 +1,6 @@
     ╭─────╮
-    │ ● ○ │  minima
-    │ ○ ● │
+    │ ● ○ │
+    │ ○ ○ │ minima
     ╰─────╯
 
 ### A minimal habit tracking CLI written in [Zig](https://ziglang.org/)

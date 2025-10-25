@@ -15,7 +15,7 @@ pub fn main() !void {
     const argsParser = if (args.len > 0) args[1..] else args;
     var parser = argh.Parser.init(allocator, argsParser);
     try parser.addFlag("--help", "-h", "Show help message");
-    try parser.addOption("--task", "-t", "read", "Start tracking a new task");
+    try parser.addPositionalWithCount("habits", "Habits to track", 0, 100);
     try parser.parse();
 
     // if errors
@@ -26,10 +26,11 @@ pub fn main() !void {
     // if --help
     if (parser.flagPresent("--help") or parser.flagPresent("-h")) {
         std.debug.print("{s}\nA minimal habit tracking CLI\n\n", .{common.logo});
-        parser.printHelpWithOptions(.simple_grouped);
+        parser.printHelpWithOptions(.flat);
         return;
     }
 
+    // Check if any unparsed arguments remain (these would be positional arguments)
     if (parser.args.len == 0) {
         // TODO: if habits.csv is empty
         // render sample example_habits
@@ -46,10 +47,11 @@ pub fn main() !void {
         //     Store: struct {},
         // };
 
-        // create a function that takes the name of a new task
-        // get task
-        const task = parser.getOption("--task") orelse "SKIP";
-        std.debug.print("task::{s}\n", .{task});
+        // Track each habit provided as positional arguments
+        // Use parser.args which contains the remaining unparsed arguments
+        for (parser.args) |habit| {
+            std.debug.print("habbit => {s}\n", .{habit});
+        }
     }
 }
 
@@ -88,10 +90,18 @@ const example_habits = [_]model.Habit{
     .{ .name = "Project", .date = "10.01" },
     .{ .name = "Project", .date = "10.04" },
     .{ .name = "Project", .date = "10.07" },
-    .{ .name = "Stretch", .date = "10.01" },
-    .{ .name = "Stretch", .date = "10.02" },
-    .{ .name = "Stretch", .date = "10.03" },
-    .{ .name = "Stretch", .date = "10.04" },
+    .{ .name = "Project", .date = "10.10" },
+    .{ .name = "Project", .date = "10.13" },
+    .{ .name = "Project", .date = "10.16" },
+    .{ .name = "Project", .date = "10.19" },
+    .{ .name = "Project", .date = "10.22" },
+    .{ .name = "Project", .date = "10.25" },
+    .{ .name = "Project", .date = "10.28" },
+    .{ .name = "Project", .date = "10.29" },
+    .{ .name = "Vim-motions", .date = "10.01" },
+    .{ .name = "Vim-motions", .date = "10.02" },
+    .{ .name = "Vim-motions", .date = "10.03" },
+    .{ .name = "Vim-motions", .date = "10.04" },
     .{ .name = "Cook", .date = "10.02" },
     .{ .name = "Cook", .date = "10.03" },
     .{ .name = "Cook", .date = "10.05" },
