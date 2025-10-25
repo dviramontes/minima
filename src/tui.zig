@@ -179,7 +179,7 @@ pub fn render(habits: []const model.Habit) !void {
                             demo_tbl.sel_rows = try rows_list.toOwnedSlice(alloc);
                         }
                         // See Row Content
-                        if (key.matches(vaxis.Key.enter, .{}) or key.matches('j', .{ .ctrl = true })) see_content = !see_content;
+                        if (key.matches(vaxis.Key.enter, .{}) or key.matches('j', .{ .ctrl = true }) or key.matches(vaxis.Key.space, .{})) see_content = !see_content;
                     },
                     .btm => {
                         if (key.matchesAny(&.{ vaxis.Key.up, 'k' }, .{}) and moving) active = .mid

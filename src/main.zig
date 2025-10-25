@@ -50,20 +50,6 @@ pub fn main() !void {
         // get task
         const task = parser.getOption("--task") orelse "SKIP";
         std.debug.print("task::{s}\n", .{task});
-
-        // write task to csv function
-
-        // format
-        // ------
-        // date,task,completed
-        // 2025-10-11,read,1
-        // 2025-10-11,exercise,0
-        // 2025-10-12,read,1
-
-        // try file.writer().print("{s},{s},{d}\n", .{date, task, completed});
-        // dependencies - Only need
-        // stdlib: std.fs.File, std.mem.split
-
     }
 }
 
@@ -90,4 +76,40 @@ const example_habits = [_]model.Habit{
     .{ .name = "Ziglings", .date = "10.10" },
     .{ .name = "Ziglings", .date = "10.11" },
     .{ .name = "Ziglings", .date = "10.12" },
+    .{ .name = "PT", .date = "10.01" },
+    .{ .name = "PT", .date = "10.03" },
+    .{ .name = "PT", .date = "10.05" },
+    .{ .name = "Game", .date = "10.02" },
+    .{ .name = "Game", .date = "10.04" },
+    .{ .name = "Game", .date = "10.06" },
+    .{ .name = "Game", .date = "10.08" },
+    .{ .name = "Game", .date = "10.10" },
+
+    .{ .name = "Project", .date = "10.01" },
+    .{ .name = "Project", .date = "10.04" },
+    .{ .name = "Project", .date = "10.07" },
+    .{ .name = "Stretch", .date = "10.01" },
+    .{ .name = "Stretch", .date = "10.02" },
+    .{ .name = "Stretch", .date = "10.03" },
+    .{ .name = "Stretch", .date = "10.04" },
+    .{ .name = "Cook", .date = "10.02" },
+    .{ .name = "Cook", .date = "10.03" },
+    .{ .name = "Cook", .date = "10.05" },
+    .{ .name = "Walk", .date = "10.01" },
+    .{ .name = "Walk", .date = "10.02" },
+    .{ .name = "Walk", .date = "10.22" },
+    .{ .name = "Walk", .date = "10.23" },
+    .{ .name = "Walk", .date = "10.28" },
+    .{ .name = "Deep Work", .date = "10.01" },
+    .{ .name = "Deep Work", .date = "10.03" },
+    .{ .name = "Deep Work", .date = "10.04" },
+    .{ .name = "Deep Work", .date = "10.05" },
+    .{ .name = "Connect", .date = "10.02" },
+    .{ .name = "Connect", .date = "10.03" },
+    .{ .name = "Connect", .date = "10.06" },
+    .{ .name = "Connect", .date = "10.07" },
+    .{ .name = "Connect", .date = "10.14" },
+    .{ .name = "8-sleep", .date = "10.01" },
+    .{ .name = "8-sleep", .date = "10.04" },
+    .{ .name = "8-sleep", .date = "10.22" },
 };
