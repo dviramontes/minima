@@ -158,6 +158,27 @@ pub fn render(habits: []const model.Habit) !void {
                             if (key.matchesAny(&.{ vaxis.Key.down, 'j' }, .{})) active = .btm;
                             break :midEvt;
                         }
+                        // sort by tally
+                        // lowest fitst
+                        if (key.matches('s', .{ })) {
+                            mem.sort(model.HabitAggregate, aggregated_habits.items, {}, sortByTallyAsc);
+                            // Rebuild the MultiArrayList
+                            habit_mal.deinit(alloc);
+                            habit_mal = std.MultiArrayList(model.HabitAggregate){};
+                            for (aggregated_habits.items) |habit| {
+                                habit_mal.append(alloc, habit) catch unreachable;
+                            }
+                        }
+                        // hightest first
+                        if (key.matches('s', .{ .shift = true })) {
+                            mem.sort(model.HabitAggregate, aggregated_habits.items, {}, sortByTallyDesc);
+                            // Rebuild the MultiArrayList
+                            habit_mal.deinit(alloc);
+                            habit_mal = std.MultiArrayList(model.HabitAggregate){};
+                            for (aggregated_habits.items) |habit| {
+                                habit_mal.append(alloc, habit) catch unreachable;
+                            }
+                        }
                         // Change Row
                         if (key.matchesAny(&.{ vaxis.Key.up, 'k' }, .{})) demo_tbl.row -|= 1;
                         if (key.matchesAny(&.{ vaxis.Key.down, 'j' }, .{})) demo_tbl.row +|= 1;
@@ -375,6 +396,23 @@ fn buildHabitTallyMap(allocator: mem.Allocator, habits_input: []const model.Habi
     }
 
     return result;
+}
+
+fn getTallyCount(tally: []const u8) usize {
+    // Each tally unit is 4 bytes (3 for ●, and 1 for space)
+    return tally.len / 4;
+}
+
+fn sortByTallyDesc(_: void, a: model.HabitAggregate, b: model.HabitAggregate) bool {
+    const a_count = getTallyCount(a.tally);
+    const b_count = getTallyCount(b.tally);
+    return a_count > b_count;
+}
+
+fn sortByTallyAsc(_: void, a: model.HabitAggregate, b: model.HabitAggregate) bool {
+    const a_count = getTallyCount(a.tally);
+    const b_count = getTallyCount(b.tally);
+    return a_count < b_count;
 }
 
 fn buildHabitDatesMap(allocator: mem.Allocator, habits_input: []const model.Habit) !std.StringHashMap([]const []const u8) {
