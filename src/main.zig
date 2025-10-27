@@ -38,9 +38,7 @@ pub fn main() !void {
         // else: load habits from ./habits.csv
         // try tui.render(loaded_habits);
     } else {
-        // input parsing
-        // TODO: move this to inputParsing function
-        // const minimabitInputs: type = enum { add, sum, reset };
+        // Input parsing
 
         // const Input: type = union(minimabitInputs) {
         //     TUI: struct {},
@@ -50,7 +48,11 @@ pub fn main() !void {
         // Track each habit provided as positional arguments
         // Use parser.args which contains the remaining unparsed arguments
         for (parser.args) |habit| {
-            std.debug.print("habbit => {s}\n", .{habit});
+            // TODO: create a new date per habbit
+            const today = model.Date.now();
+            const today_str = try today.toStringFull(allocator);
+            std.debug.print("{s} => {s}\n", .{today_str, habit});
+            
         }
     }
 }
