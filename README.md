@@ -8,15 +8,9 @@
 
 ## Usage
 
-### Start tracking a new minimal
+### Start tracking a new habit
 ```bash
-min add <habit>
-```
-
-### Mark habit as complete
-```bash
-min done <habit>
-min + <habit>
+min <habit-1> <habit-2> <habit-3>
 ```
 
 ### View all habits
@@ -24,33 +18,9 @@ min + <habit>
 min list
 ```
 
-### View habit statistics
-```bash
-min stats <habit>
-```
-
 ### Remove a habit
 ```bash
 min rm <habit>
-```
-
-## Examples
-
-```bash
-# Start tracking a daily meditation
-min add meditation
-
-# Mark today's meditation as complete
-min done meditation
-
-# View all tracked habits
-min list
-
-# Check your meditation streak
-min stats meditation
-
-# Stop tracking a habit
-min rm meditation
 ```
 
 ## Installation
