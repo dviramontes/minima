@@ -31,13 +31,8 @@ pub const Date = struct {
         return Date{ .year = @intCast(year_day.year), .month = @intFromEnum(month_day.month), .day = month_day.day_index };
     }
 
-    /// Formats the date as YYYY.MM.DD
-    pub fn toStringFull(self: Date, allocator: std.mem.Allocator) ![]u8 {
-        return try std.fmt.allocPrint(allocator, "{d:0>4}.{d:0>2}.{d:0>2}", .{ self.year, self.month, self.day });
-    }
-
-    /// Formats the date as MM.DD
-    pub fn toStringMMDD(self: Date, allocator: std.mem.Allocator) ![]u8 {
-        return try std.fmt.allocPrint(allocator, "{d:0>2}.{d:0>2}", .{ self.month, self.day });
+    /// Formats the date as YYYY-MM-DD (ISO 8601 standard)
+    pub fn toStringISO(self: Date, allocator: std.mem.Allocator) ![]u8 {
+        return try std.fmt.allocPrint(allocator, "{d:0>4}-{d:0>2}-{d:0>2}", .{ self.year, self.month, self.day });
     }
 };

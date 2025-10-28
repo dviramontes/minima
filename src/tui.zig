@@ -160,7 +160,7 @@ pub fn render(habits: []const model.Habit) !void {
                         }
                         // sort by tally
                         // lowest fitst
-                        if (key.matches('s', .{ })) {
+                        if (key.matches('s', .{})) {
                             mem.sort(model.HabitAggregate, aggregated_habits.items, {}, sortByTallyAsc);
                             // Rebuild the MultiArrayList
                             habit_mal.deinit(alloc);
