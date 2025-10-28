@@ -7,6 +7,7 @@ const common = @import("common.zig");
 const vaxis = @import("vaxis");
 const log = std.log.scoped(.main);
 const model = @import("model.zig");
+const csv = @import("csv");
 
 const ActiveSection = enum {
     top,
@@ -160,7 +161,7 @@ pub fn render(habits: []const model.Habit) !void {
                         }
                         // sort by tally
                         // lowest fitst
-                        if (key.matches('s', .{ })) {
+                        if (key.matches('s', .{})) {
                             mem.sort(model.HabitAggregate, aggregated_habits.items, {}, sortByTallyAsc);
                             // Rebuild the MultiArrayList
                             habit_mal.deinit(alloc);
