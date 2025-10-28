@@ -33,8 +33,6 @@ pub fn main() !void {
 
     // Check if any unparsed arguments remain (these would be positional arguments)
     if (parser.args.len == 0) {
-        // render sample example_habits
-        try tui.render(&example_habits);
         // Check if habits.csv exists
         const csv_path = "habits.csv";
 
@@ -54,17 +52,23 @@ pub fn main() !void {
         } else {
             // No file, rendering example habits
             std.debug.print("No habits.csv found, using example habits\n\n", .{});
+            try tui.render(&example_habits);
         }
     } else {
         // Input parsing
 
         // Track each habit provided as positional arguments
         // Use parser.args which contains the remaining unparsed arguments
+        const csv_path = "habits.csv";
+        const today = model.Date.now();
+        const today_str = try today.toStringISO(allocator);
+
+        // Update/overwrite habits for today
+        try csv.updateHabits(allocator, csv_path, today_str, parser.args);
+
+        std.debug.print("✓ Logged {d} habit(s) for {s}:\n", .{ parser.args.len, today_str });
         for (parser.args) |habit| {
-            // TODO: create a new date per habbit
-            const today = model.Date.now();
-            const today_str = try today.toStringISO(allocator);
-            std.debug.print("{s} => {s}\n", .{ today_str, habit });
+            std.debug.print("  - {s}\n", .{habit});
         }
     }
 }

@@ -121,3 +121,145 @@ pub fn fileExists(file_path: []const u8) bool {
 
     return true;
 }
+
+/// Append habits to CSV file
+/// If file doesn't exist, create it with header
+/// Format: date,habit1,habit2,habit3
+pub fn appendHabits(_: std.mem.Allocator, file_path: []const u8, date: []const u8, habit_names: []const []const u8) !void {
+    // Try to open file, if it doesn't exist, create it
+    const file = std.fs.cwd().openFile(file_path, .{ .mode = .read_write }) catch |err| {
+        if (err == error.FileNotFound) {
+            // Create new file
+            const new_file = try std.fs.cwd().createFile(file_path, .{});
+            defer new_file.close();
+
+            // Write header
+            try new_file.writeAll("date,habits\n");
+
+            // Write the habits
+            try new_file.writeAll(date);
+            for (habit_names) |habit| {
+                try new_file.writeAll(",");
+                try new_file.writeAll(habit);
+            }
+            try new_file.writeAll("\n");
+            return;
+        }
+        return err;
+    };
+    defer file.close();
+
+    // If file exists, append to it
+    try file.seekFromEnd(0);
+
+    // Write the new line
+    try file.writeAll(date);
+    for (habit_names) |habit| {
+        try file.writeAll(",");
+        try file.writeAll(habit);
+    }
+    try file.writeAll("\n");
+}
+
+/// Update or add habits for a given date
+/// If the date exists, replaces that line. Otherwise appends a new line.
+pub fn updateHabits(allocator: std.mem.Allocator, file_path: []const u8, date: []const u8, habit_names: []const []const u8) !void {
+    if (!fileExists(file_path)) {
+        // File doesn't exist, create it
+        return appendHabits(allocator, file_path, date, habit_names);
+    }
+
+    const file = try std.fs.cwd().openFile(file_path, .{});
+    defer file.close();
+
+    const file_size = try file.getEndPos();
+    const content = try file.readToEndAlloc(allocator, file_size);
+    defer allocator.free(content);
+
+    // Build new content
+    var new_lines = std.ArrayList([]const u8){};
+    defer new_lines.deinit(allocator);
+
+    var lines_iter = std.mem.splitScalar(u8, content, '\n');
+    var line_num: usize = 0;
+    var date_found = false;
+
+    while (lines_iter.next()) |line| {
+        line_num += 1;
+
+        // Always keep header
+        if (line_num == 1) {
+            try new_lines.append(allocator, line);
+            continue;
+        }
+
+        const trimmed_line = std.mem.trim(u8, line, &std.ascii.whitespace);
+        if (trimmed_line.len == 0) continue;
+
+        var fields_iter = std.mem.splitScalar(u8, trimmed_line, ',');
+        if (fields_iter.next()) |date_field| {
+            const date_str = std.mem.trim(u8, date_field, &std.ascii.whitespace);
+            if (std.mem.eql(u8, date_str, date)) {
+                // Found the date, replace with new habits
+                var new_line = std.ArrayList(u8){};
+                defer new_line.deinit(allocator);
+
+                try new_line.appendSlice(allocator, date);
+                for (habit_names) |habit| {
+                    try new_line.append(allocator, ',');
+                    try new_line.appendSlice(allocator, habit);
+                }
+
+                try new_lines.append(allocator, try new_line.toOwnedSlice(allocator));
+                date_found = true;
+            } else {
+                // Keep existing line
+                try new_lines.append(allocator, line);
+            }
+        } else {
+            try new_lines.append(allocator, line);
+        }
+    }
+
+    // If date wasn't found, add it
+    if (!date_found) {
+        var new_line = std.ArrayList(u8){};
+        defer new_line.deinit(allocator);
+
+        try new_line.appendSlice(allocator, date);
+        for (habit_names) |habit| {
+            try new_line.append(allocator, ',');
+            try new_line.appendSlice(allocator, habit);
+        }
+
+        try new_lines.append(allocator, try new_line.toOwnedSlice(allocator));
+    }
+
+    // Write new content to file
+    const new_file = try std.fs.cwd().createFile(file_path, .{});
+    defer new_file.close();
+
+    for (new_lines.items, 0..) |line, i| {
+        try new_file.writeAll(line);
+        if (i < new_lines.items.len - 1 or line.len > 0) {
+            try new_file.writeAll("\n");
+        }
+    }
+
+    // Free allocated lines
+    for (new_lines.items) |line| {
+        if (line_num > 1) { // Don't free header or original lines
+            var found_in_original = false;
+            var check_iter = std.mem.splitScalar(u8, content, '\n');
+            while (check_iter.next()) |orig_line| {
+                if (std.mem.eql(u8, line, orig_line)) {
+                    found_in_original = true;
+                    break;
+                }
+            }
+            if (!found_in_original) {
+                allocator.free(line);
+            }
+        }
+    }
+}
