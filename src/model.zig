@@ -21,14 +21,26 @@ pub const Date = struct {
     month: u8,
     day: u8,
 
-    /// Returns today's date
+    /// Returns today's date in America/New_York timezone
     pub fn now() Date {
         const timestamp = std.time.timestamp();
-        const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(timestamp) };
+
+        // America/New_York uses:
+        // - EST (UTC-5) from November to March
+        // - EDT (UTC-4) from March to November
+        // For simplicity, using EDT offset (UTC-4) as default
+        // TODO: Implement proper DST calculation for automatic switching
+        const ny_offset: i64 = 3600 * -4; // EDT offset
+        const ny_timestamp = timestamp + ny_offset;
+        const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(ny_timestamp) };
         const epoch_day = epoch_seconds.getEpochDay();
         const year_day = epoch_day.calculateYearDay();
         const month_day = year_day.calculateMonthDay();
-        return Date{ .year = @intCast(year_day.year), .month = @intFromEnum(month_day.month), .day = month_day.day_index };
+
+        // day_index is 0-indexed, so add 1 to get the actual day of month
+        const day_of_month = month_day.day_index + 1;
+
+        return Date{ .year = @intCast(year_day.year), .month = @intFromEnum(month_day.month), .day = day_of_month };
     }
 
     /// Formats the date as YYYY-MM-DD (ISO 8601 standard)
