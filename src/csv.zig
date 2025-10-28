@@ -162,7 +162,7 @@ pub fn appendHabits(_: std.mem.Allocator, file_path: []const u8, date: []const u
 }
 
 /// Update or add habits for a given date
-/// If the date exists, replaces that line. Otherwise appends a new line.
+/// If the date exists, appends new habits to existing ones (skips duplicates). Otherwise creates a new line.
 pub fn updateHabits(allocator: std.mem.Allocator, file_path: []const u8, date: []const u8, habit_names: []const []const u8) !void {
     if (!fileExists(file_path)) {
         // File doesn't exist, create it
@@ -200,14 +200,31 @@ pub fn updateHabits(allocator: std.mem.Allocator, file_path: []const u8, date: [
         if (fields_iter.next()) |date_field| {
             const date_str = std.mem.trim(u8, date_field, &std.ascii.whitespace);
             if (std.mem.eql(u8, date_str, date)) {
-                // Found the date, replace with new habits
+                // Found the date, append new habits if they don't already exist
                 var new_line = std.ArrayList(u8){};
                 defer new_line.deinit(allocator);
 
-                try new_line.appendSlice(allocator, date);
+                // Start with existing line
+                try new_line.appendSlice(allocator, line);
+
+                // Parse existing habits from the line
+                var existing_habits = std.StringHashMap(void).init(allocator);
+                defer existing_habits.deinit();
+
+                var habit_iter = fields_iter; // Continue from where we left off
+                while (habit_iter.next()) |habit_field| {
+                    const habit = std.mem.trim(u8, habit_field, &std.ascii.whitespace);
+                    if (habit.len > 0) {
+                        try existing_habits.put(habit, {});
+                    }
+                }
+
+                // Append new habits that don't exist
                 for (habit_names) |habit| {
-                    try new_line.append(allocator, ',');
-                    try new_line.appendSlice(allocator, habit);
+                    if (!existing_habits.contains(habit)) {
+                        try new_line.append(allocator, ',');
+                        try new_line.appendSlice(allocator, habit);
+                    }
                 }
 
                 try new_lines.append(allocator, try new_line.toOwnedSlice(allocator));
